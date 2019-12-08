@@ -1,11 +1,13 @@
-using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.IO;
-using NUnit.Framework;
-
 namespace Day07
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Diagnostics;
+    using System.Drawing;
+    using System.IO;
+    using System.Linq;
+    using NUnit.Framework;
+
     public class Tests
     {
         [Test]
@@ -25,94 +27,105 @@ namespace Day07
         }
     }
 
+    public class SpaceImageFormat
+    {
+        public const char Black = '0';
+        public const char White = '1';
+        public const char Transparent = '2';
+    }
+
     public class Solver
     {
         public static string SolvePart1(string input)
         {
-            var digits = getDigits(input.Trim());
-            var layerSize = 25 * 6;
-            var layers = digits.Count / layerSize;
-            Console.WriteLine(digits.Count / (layerSize * 1.0));
-            var min0 = int.MaxValue;
-            var result = -1;
-            for (int layer = 0; layer < layers; layer++)
+            const int width = 25;
+            const int height = 6;
+            var layers = GetLayers(input, width, height);
+            int? min0 = null;
+            int? result = null;
+            foreach (var layer in layers)
             {
-                var num0 = 0;
-                var num1 = 0;
-                var num2 = 0;
-                for (var i = layer * layerSize; i < (layer + 1) * layerSize; i++)
+                var num0 = layer.Where(x => x == SpaceImageFormat.Black).Count();
+                if (min0 == null || num0 < min0)
                 {
-                    var digit = digits[i];
-                    if (digit == 0)
-                    {
-                        num0++;
-                    }
-                    else if (digit == 1)
-                    {
-                        num1++;
-                    }
-                    else if (digit == 2)
-                    {
-                        num2++;
-                    }
-                }
-                if (num0 < min0)
-                {
-                    result = num1 * num2;
                     min0 = num0;
+                    var num1 = layer.Where(x => x == SpaceImageFormat.White).Count();
+                    var num2 = layer.Where(x => x == SpaceImageFormat.Transparent).Count();
+                    result = num1 * num2;
                 }
             }
-            return result.ToString();
+
+            return result!.Value.ToString();
         }
 
         public static string SolvePart2(string input)
         {
-
-            var digits = getDigits(input.Trim());
-            var width = 25;
-            var height = 6;
-            var layerSize = width * height;
-            var layers = digits.Count / layerSize;
-            var image = new int[layerSize];
-            for (var k = 0; k < image.Length; k++)
+            const int width = 25;
+            const int height = 6;
+            var layers = GetLayers(input, width, height);
+            var image = (char[])layers[0].Clone();
+            foreach (var layer in layers)
             {
-                image[k] = 2;
-            }
-            for (int layer = 0; layer < layers; layer++)
-            {
-                for (var i = layer * layerSize; i < (layer + 1) * layerSize; i++)
+                for (var i = 0; i < layer.Length; i++)
                 {
-                    if (image[i % layerSize] == 2)
+                    if (image[i] == SpaceImageFormat.Transparent)
                     {
-                        image[i % layerSize] = digits[i];
+                        image[i] = layer[i];
                     }
                 }
             }
 
+            var imageFilename = $"Day08-Part2-{DateTime.Now.Ticks}.bmp";
+            SaveAsBitmap(image, width, height, imageFilename);
+
+            return Ocr(image);
+        }
+
+        private static void SaveAsBitmap(char[] image, int width, int height, string filename)
+        {
             var bitmap = new Bitmap(width, height);
-            var j = 0;
             for (var y = 0; y < height; y++)
             {
                 for (var x = 0; x < width; x++)
                 {
-                    bitmap.SetPixel(x, y, image[j] == 0 ? Color.Black : Color.White);
-                    j++;
+                    var pixel = image[(y * width) + x];
+                    var color = pixel switch
+                    {
+                        SpaceImageFormat.Black => Color.Black,
+                        SpaceImageFormat.White => Color.White,
+                        SpaceImageFormat.Transparent => Color.Red,
+                        _ => throw new Exception("Unexpected color: " + pixel),
+                    };
+                    bitmap.SetPixel(x, y, color);
                 }
             }
-            bitmap.Save("Day08-Part2.bmp");
 
-            // TODO: OCR?
-            return string.Join("", image);
+            bitmap.Save(filename, System.Drawing.Imaging.ImageFormat.Bmp);
         }
 
-        static List<int> getDigits(string str)
+        private static string Ocr(char[] image)
         {
-            var digits = new List<int>(str.Length);
-            for (var i = 0; i < str.Length; i++)
+            var imageString = string.Join(string.Empty, image);
+            return imageString switch
             {
-                digits.Add(int.Parse(str.AsSpan(i, 1)));
+                "111101110000110011001110000010100100001010010100100010011100000101001011100010001001000010111101001010000100101001010010100101111011100011001001011100" => "ZBJAB",
+                _ => throw new Exception("Unable to OCR: " + imageString),
+            };
+        }
+
+        private static List<char[]> GetLayers(string input, int width, int height)
+        {
+            var chars = input.Trim().ToCharArray();
+            var pixelsPerLayer = width * height;
+            var numLayers = chars.Length / pixelsPerLayer;
+            Debug.Assert((chars.Length % pixelsPerLayer) == 0, "Unexpected");
+            var layers = new List<char[]>();
+            for (var layerIndex = 0; layerIndex < numLayers; layerIndex++)
+            {
+                layers.Add(input.Substring(layerIndex * pixelsPerLayer, pixelsPerLayer).ToCharArray());
             }
-            return digits;
+
+            return layers;
         }
     }
 }

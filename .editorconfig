@@ -1,0 +1,8 @@
+root = true
+
+[*.cs]
+# https://github.com/MicrosoftDocs/visualstudio-docs/blob/master/docs/ide/editorconfig-code-style-settings-reference.md
+csharp_prefer_braces = true:warning
+csharp_preferred_modifier_order = public,private,protected,internal,static,extern,new,virtual,abstract,sealed,override,readonly,unsafe,volatile,async:warning
+csharp_style_unused_value_expression_statement_preference = discard_variable:warning
+dotnet_style_require_accessibility_modifiers = for_non_interface_members:warning

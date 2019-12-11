@@ -155,7 +155,20 @@ namespace Day10
     {
         public static string SolvePart1(string input)
         {
-            var map = new Dictionary<Point, int>();
+            HashSet<Point> points = ParseInput(input);
+            Dictionary<Point, int> pointsWithVisibilityCount = GetPointsWithVisibilityCount(points);
+            Point pointWithBestVisibility = GetPointWithBestVisibility(pointsWithVisibilityCount)!.Value;
+            return pointsWithVisibilityCount[pointWithBestVisibility].ToString();
+        }
+
+        public static string SolvePart2(string input)
+        {
+            return "TODO";
+        }
+
+        public static HashSet<Point> ParseInput(string input)
+        {
+            var points = new HashSet<Point>();
             var x = 0;
             var y = 0;
             foreach (var line in input.Trim().Split("\n"))
@@ -164,47 +177,53 @@ namespace Day10
                 {
                     if (chr == '#')
                     {
-                        map.Add(new Point { X = x, Y = y }, 0);
+                        Trace.Assert(points.Add(new Point { X = x, Y = y }));
                     }
                     x++;
                 }
                 y++;
             }
+            return points;
+        }
 
-            foreach (var p1 in map.Keys.ToList())
+        public static Dictionary<Point, int> GetPointsWithVisibilityCount(HashSet<Point> points)
+        {
+            var pointsWithVisibilityCount = new Dictionary<Point, int>();
+            foreach (var p1 in points)
             {
-                foreach (var p2 in map.Keys.ToList())
+                pointsWithVisibilityCount.Add(p1, 0);
+                foreach (var p2 in points)
                 {
                     if (p1.Equals(p2)) { continue; }
-                    if (CanSeeEachother(p1, p2, map))
+                    if (CanSeeEachOther(p1, p2, points))
                     {
-                        map[p1]++;
+                        pointsWithVisibilityCount[p1]++;
                     }
                 }
             }
+            return pointsWithVisibilityCount;
+        }
 
+        public static Point? GetPointWithBestVisibility(Dictionary<Point, int> pointsWithVisibilityCount)
+        {
             var maxVisible = -1;
-            foreach (var kv in map)
+            Point? pointWithBestVisibility = null;
+            foreach (var (point, cnt) in pointsWithVisibilityCount)
             {
-                if (kv.Value > maxVisible)
+                if (cnt > maxVisible)
                 {
-                    maxVisible = kv.Value;
+                    maxVisible = cnt;
+                    pointWithBestVisibility = point;
                 }
             }
-
-            return maxVisible.ToString();
+            return pointWithBestVisibility;
         }
 
-        public static string SolvePart2(string input)
-        {
-            return "TODO";
-        }
-
-        public static bool CanSeeEachother(Point p1, Point p2, Dictionary<Point, int> map)
+        public static bool CanSeeEachOther(Point p1, Point p2, HashSet<Point> points)
         {
             foreach (var intermediatePoint in GetIntermediatePoints(p1, p2))
             {
-                if (map.ContainsKey(intermediatePoint))
+                if (points.Contains(intermediatePoint))
                 {
                     return false;
                 }
@@ -214,23 +233,22 @@ namespace Day10
 
         public static List<Point> GetIntermediatePoints(Point p1, Point p2)
         {
-            int diffX = Math.Abs(p1.X - p2.X);
-            int diffY = Math.Abs(p1.Y - p2.Y);
-            int numIntermediateSteps = Math.Max(diffX, diffY) - 1;
             var intermediatePoints = new List<Point>();
+            int diffX = p2.X - p1.X;
+            int diffY = p2.Y - p1.Y;
+            int numIntermediateSteps = Math.Max(Math.Abs(diffX), Math.Abs(diffY)) - 1;
             for (var intermediateStep = 1; intermediateStep <= numIntermediateSteps; intermediateStep++)
             {
-                var modX = ((p2.X - p1.X) * intermediateStep) % (numIntermediateSteps + 1);
-                var modY = ((p2.Y - p1.Y) * intermediateStep) % (numIntermediateSteps + 1);
-                if (modX == 0 && modY == 0)
+                var stepX = Math.DivRem(diffX * intermediateStep, numIntermediateSteps + 1, out int remainderX);
+                var stepY = Math.DivRem(diffY * intermediateStep, numIntermediateSteps + 1, out int remainderY);
+                if (remainderX == 0 && remainderY == 0)
                 {
-                    int currX = p1.X + ((p2.X - p1.X) * intermediateStep) / (numIntermediateSteps + 1);
-                    int currY = p1.Y + ((p2.Y - p1.Y) * intermediateStep) / (numIntermediateSteps + 1);
+                    int currX = p1.X + stepX;
+                    int currY = p1.Y + stepY;
                     intermediatePoints.Add(new Point() { X = currX, Y = currY });
                 }
             }
             return intermediatePoints;
         }
-
     }
 }
